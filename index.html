@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Contrast Checker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { font-size: 19px; }
+
+  :root {
+    --bg: #f4f2ee;
+    --surface: #ffffff;
+    --border: rgba(0,0,0,0.08);
+    --border-strong: rgba(0,0,0,0.14);
+    --text: #1a1a1a;
+    --text-muted: #888;
+    --text-faint: #bbb;
+    --pass-bg: #e6f4e0;
+    --pass-text: #2d6e1a;
+    --fail-bg: #fde8e8;
+    --fail-text: #b02020;
+    --accent: #1a1a1a;
+    --font-sans: 'DM Sans', sans-serif;
+    --font-mono: 'DM Mono', monospace;
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 2rem 1rem 4rem;
+  }
+
+  header {
+    max-width: 900px;
+    margin: 0 auto 2.5rem;
+  }
+
+  header h1 {
+    font-size: clamp(1.4rem, 4vw, 2rem);
+    font-weight: 500;
+    letter-spacing: -0.03em;
+    margin-bottom: 0.25rem;
+  }
+
+  header p {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    font-weight: 300;
+  }
+
+  .layout {
+    max-width: 900px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: 1.5rem;
+    align-items: start;
+  }
+
+  @media (max-width: 680px) {
+    .layout { grid-template-columns: 1fr; }
+  }
+
+  /* ── Panel ── */
+  .panel {
+    background: var(--surface);
+    border: 0.5px solid var(--border-strong);
+    border-radius: var(--radius);
+    padding: 1.25rem;
+  }
+
+  .panel-section { margin-bottom: 1.25rem; }
+  .panel-section:last-child { margin-bottom: 0; }
+
+  .panel-label {
+    font-size: 0.7rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    margin-bottom: 0.6rem;
+  }
+
+  .colour-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+
+  .colour-row:last-child { margin-bottom: 0; }
+
+  .colour-swatch {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    border: 0.5px solid var(--border-strong);
+    flex-shrink: 0;
+  }
+
+  .hex-display {
+    flex: 1;
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    padding: 0 10px;
+    height: 32px;
+    border-radius: 6px;
+    border: 0.5px solid var(--border-strong);
+    background: var(--bg);
+    color: var(--text);
+    display: flex;
+    align-items: center;
+  }
+
+  .colour-role {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    white-space: nowrap;
+    flex-shrink: 0;
+    min-width: 28px;
+  }
+
+  /* ── Ratio display ── */
+  .ratio-display {
+    background: var(--bg);
+    border-radius: var(--radius-sm);
+    padding: 1rem;
+    text-align: center;
+    margin-bottom: 1rem;
+  }
+
+  .ratio-number {
+    font-family: var(--font-mono);
+    font-size: 2rem;
+    font-weight: 500;
+    letter-spacing: -0.04em;
+    line-height: 1;
+  }
+
+  .ratio-label { font-size: 0.7rem; color: var(--text-muted); margin-top: 4px; }
+
+  /* ── WCAG grid ── */
+  .wcag-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 5px;
+  }
+
+  .wcag-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.7rem;
+    padding: 5px 8px;
+    background: var(--bg);
+    border-radius: 6px;
+  }
+
+  .wcag-name { color: var(--text-muted); }
+
+  .badge {
+    font-size: 0.65rem;
+    font-weight: 500;
+    padding: 2px 6px;
+    border-radius: 99px;
+  }
+
+  .pass { background: var(--pass-bg); color: var(--pass-text); }
+  .fail { background: var(--fail-bg); color: var(--fail-text); }
+
+  /* ── Right column ── */
+  .right { display: flex; flex-direction: column; gap: 1rem; }
+
+  /* ── Scheme tabs ── */
+  .scheme-tabs {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .scheme-tab {
+    font-family: var(--font-sans);
+    font-size: 0.75rem;
+    font-weight: 400;
+    padding: 6px 12px;
+    border-radius: 99px;
+    border: 0.5px solid var(--border-strong);
+    background: var(--surface);
+    color: var(--text);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: background 0.12s, border-color 0.12s;
+  }
+
+  .scheme-tab:hover { background: var(--bg); }
+
+  .scheme-tab.active {
+    background: var(--text);
+    color: var(--surface);
+    border-color: var(--text);
+  }
+
+  .scheme-tab.active .tab-badge.pass { background: var(--pass-bg); color: var(--pass-text); }
+  .scheme-tab.active .tab-badge.fail { background: var(--fail-bg); color: var(--fail-text); }
+  .tab-badge { font-size: 0.65rem; padding: 1px 6px; border-radius: 99px; }
+
+  /* ── Vision grid ── */
+  .vision-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 10px;
+  }
+
+  .vision-card {
+    background: var(--surface);
+    border: 0.5px solid var(--border-strong);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+
+  .vision-preview {
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-height: 110px;
+  }
+
+  .vp-heading { font-size: 0.875rem; font-weight: 500; line-height: 1.3; }
+  .vp-body { font-size: 0.7rem; opacity: 0.88; line-height: 1.4; }
+
+  .vp-btn {
+    display: inline-block;
+    font-size: 0.65rem;
+    font-weight: 500;
+    padding: 4px 10px;
+    border-radius: 5px;
+    margin-top: 4px;
+    align-self: flex-start;
+  }
+
+  .vision-meta {
+    padding: 8px 10px;
+    border-top: 0.5px solid var(--border);
+  }
+
+  .vision-name {
+    font-size: 0.72rem;
+    font-weight: 500;
+    color: var(--text);
+    margin-bottom: 2px;
+  }
+
+  .vision-stats {
+    display: flex;
+    gap: 10px;
+  }
+
+  .vs-item { display: flex; flex-direction: column; }
+  .vs-val { font-size: 0.65rem; font-weight: 500; color: var(--text); font-family: var(--font-mono); }
+  .vs-lbl { font-size: 0.6rem; color: var(--text-faint); }
+  .vs-note { font-size: 0.62rem; color: var(--text-faint); font-style: italic; line-height: 1.3; }
+
+  /* ── SVG filters hidden ── */
+  .svg-filters { position: absolute; width: 0; height: 0; overflow: hidden; }
+
+  /* ── Footer ── */
+  footer {
+    max-width: 900px;
+    margin: 2rem auto 0;
+    font-size: 0.72rem;
+    color: var(--text-faint);
+    display: flex;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+  }
+
+  footer span::before { content: '· '; }
+  footer span:first-child::before { content: ''; }
+</style>
+</head>
+<body>
+
+<svg class="svg-filters">
+  <defs>
+    <filter id="f-protanopia">
+      <feColorMatrix type="matrix" values="0.567,0.433,0,0,0 0.558,0.442,0,0,0 0,0.242,0.758,0,0 0,0,0,1,0"/>
+    </filter>
+    <filter id="f-deuteranopia">
+      <feColorMatrix type="matrix" values="0.625,0.375,0,0,0 0.7,0.3,0,0,0 0,0.3,0.7,0,0 0,0,0,1,0"/>
+    </filter>
+    <filter id="f-tritanopia">
+      <feColorMatrix type="matrix" values="0.95,0.05,0,0,0 0,0.433,0.567,0,0 0,0.475,0.525,0,0 0,0,0,1,0"/>
+    </filter>
+  </defs>
+</svg>
+
+<header>
+  <h1>Contrast checker</h1>
+  <p>WCAG 2.1 contrast ratios + vision simulation</p>
+</header>
+
+<div class="layout">
+
+  <aside class="panel">
+    <div class="panel-section">
+      <div class="panel-label">Colours</div>
+      <div class="colour-row">
+        <div class="colour-swatch" id="fg-swatch"></div>
+        <div class="hex-display" id="fg-hex-display"></div>
+        <span class="colour-role">Text</span>
+      </div>
+      <div class="colour-row">
+        <div class="colour-swatch" id="bg-swatch"></div>
+        <div class="hex-display" id="bg-hex-display"></div>
+        <span class="colour-role">BG</span>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <div class="ratio-display">
+        <div class="ratio-number" id="ratio-num">—</div>
+        <div class="ratio-label">contrast ratio</div>
+      </div>
+      <div class="wcag-grid" id="wcag-grid"></div>
+    </div>
+  </aside>
+
+  <div class="right">
+    <div class="scheme-tabs" id="scheme-tabs"></div>
+    <div class="vision-grid" id="vision-grid"></div>
+  </div>
+
+</div>
+
+<footer>
+  <span>WCAG AA requires 4.5:1 normal text, 3:1 large text</span>
+  <span>WCAG AAA requires 7:1 normal text, 4.5:1 large text</span>
+  <span>Large text = 18px+ or 14px+ bold</span>
+</footer>
+
+<script>
+const FG = '#ffffff';
+const BG = '#2FA3F8';
+
+// Set static colour display
+document.getElementById('fg-swatch').style.background = FG;
+document.getElementById('bg-swatch').style.background = BG;
+document.getElementById('fg-hex-display').textContent = FG.toUpperCase();
+document.getElementById('bg-hex-display').textContent = BG.toUpperCase();
+
+const visions = [
+  { id: 'normal',       label: 'Normal vision',  filter: 'none',                                         equalNote: 'No impairment' },
+  { id: 'protanopia',   label: 'Protanopia',      filter: 'url(#f-protanopia)',                           male: '~1%',  female: '~0.01%' },
+  { id: 'deuteranopia', label: 'Deuteranopia',    filter: 'url(#f-deuteranopia)',                         male: '~5%',  female: '~0.4%' },
+  { id: 'tritanopia',   label: 'Tritanopia',      filter: 'url(#f-tritanopia)',                           equalNote: '~0.01% all' },
+  { id: 'lowvision',    label: 'Low vision',      filter: 'blur(1.2px) contrast(0.7)',                    equalNote: 'Not sex-linked' },
+  { id: 'aging',        label: 'Aging eyes',      filter: 'sepia(0.35) contrast(0.8) brightness(0.92)',   equalNote: 'Not sex-linked' },
+];
+
+function hexToRgb(h) {
+  h = h.replace('#','');
+  if (h.length === 3) h = h.split('').map(c=>c+c).join('');
+  const n = parseInt(h, 16);
+  return [n>>16&255, n>>8&255, n&255];
+}
+function lin(c) { c/=255; return c<=0.03928?c/12.92:Math.pow((c+0.055)/1.055,2.4); }
+function lum([r,g,b]) { return 0.2126*lin(r)+0.7152*lin(g)+0.0722*lin(b); }
+function ratio(fg, bg) {
+  const l1=lum(hexToRgb(fg)), l2=lum(hexToRgb(bg));
+  const hi=Math.max(l1,l2), lo=Math.min(l1,l2);
+  return (hi+0.05)/(lo+0.05);
+}
+
+function updatePanel(fg, bg) {
+  const r = ratio(fg, bg);
+  document.getElementById('ratio-num').textContent = r.toFixed(2) + ':1';
+  const rows = [
+    ['Normal AA',    r >= 4.5],
+    ['Normal AAA',   r >= 7],
+    ['Large AA',     r >= 3],
+    ['Large AAA',    r >= 4.5],
+    ['UI comp AA',   r >= 3],
+    ['UI comp AAA',  r >= 4.5],
+  ];
+  document.getElementById('wcag-grid').innerHTML = rows.map(([n,ok])=>
+    `<div class="wcag-row"><span class="wcag-name">${n}</span><span class="badge ${ok?'pass':'fail'}">${ok?'Pass':'Fail'}</span></div>`
+  ).join('');
+}
+
+let activeScheme = 'current';
+
+function darkenHex(hex, amount) {
+  let [r,g,b] = hexToRgb(hex);
+  r = Math.max(0, Math.round(r * (1-amount)));
+  g = Math.max(0, Math.round(g * (1-amount)));
+  b = Math.max(0, Math.round(b * (1-amount)));
+  return '#' + [r,g,b].map(v=>v.toString(16).padStart(2,'0')).join('');
+}
+
+function buildSchemeTabs(fg, bg) {
+  const tabs = [
+    { key: 'current',  label: 'Current colours', fg, bg },
+    { key: 'inverted', label: 'Inverted',          fg: bg, bg: fg },
+    { key: 'darktext', label: 'Dark text',          fg: '#353535', bg },
+    { key: 'darkbg',   label: 'Darker bg',          fg, bg: darkenHex(bg, 0.45) },
+  ];
+
+  document.getElementById('scheme-tabs').innerHTML = tabs.map(t => {
+    const r = ratio(t.fg, t.bg);
+    const passes = r >= 4.5;
+    const isActive = activeScheme === t.key;
+    return `<button class="scheme-tab${isActive?' active':''}" onclick="selectScheme('${t.key}','${t.fg}','${t.bg}','${fg}','${bg}')">
+      ${t.label}
+      <span class="tab-badge ${passes?'pass':'fail'}">${r.toFixed(2)}:1</span>
+    </button>`;
+  }).join('');
+
+  const active = tabs.find(t=>t.key===activeScheme) || tabs[0];
+  renderVisionGrid(active.fg, active.bg);
+}
+
+function selectScheme(key, schemeFg, schemeBg, baseFg, baseBg) {
+  activeScheme = key;
+  renderVisionGrid(schemeFg, schemeBg);
+  buildSchemeTabs(baseFg, baseBg);
+}
+
+function renderVisionGrid(fg, bg) {
+  document.getElementById('vision-grid').innerHTML = visions.map(v => {
+    const meta = v.equalNote
+      ? `<span class="vs-note">${v.equalNote}</span>`
+      : `<div class="vision-stats">
+          <div class="vs-item"><span class="vs-val">${v.male}</span><span class="vs-lbl">men</span></div>
+          <div class="vs-item"><span class="vs-val">${v.female}</span><span class="vs-lbl">women</span></div>
+        </div>`;
+    return `<div class="vision-card">
+      <div class="vision-preview" style="background:${bg}; filter:${v.filter};">
+        <span class="vp-heading" style="color:${fg};">Works with your brand</span>
+        <span class="vp-body" style="color:${fg};">Manage your social presence across all channels.</span>
+        <span class="vp-btn" style="background:${fg}; color:${bg};">Get started</span>
+      </div>
+      <div class="vision-meta">
+        <div class="vision-name">${v.label}</div>
+        ${meta}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+updatePanel(FG, BG);
+buildSchemeTabs(FG, BG);
+</script>
+</body>
+</html>
